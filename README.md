@@ -12,3 +12,6 @@ Most notably:
 - I use a second display buffer that contains the extra bytes required to address each line, headers, etc, since the protocol bytes would otherwise collide with the pixel data. This means it has to copy them over line by line when it flushes the display.
 - There are 8 extra bytes representing a color pallete at the beginning of the draw buffer that you have to skip when using `LV_COLOR_FORMAT_I1` which is the monochrome format.
 - There is no more sharp_mip_set_px function since that callback no longer exists in 9.x
+
+Example:
+![solid rectangle and the text Hello, world!](images/example.jpg)
