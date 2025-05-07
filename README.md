@@ -14,4 +14,4 @@ Most notably:
 - There is no more sharp_mip_set_px function since that callback no longer exists in 9.x
 
 Example:
-![solid rectangle and the text Hello, world!](images/example.jpg)
+![solid rectangle and the text Hello, world!](images/example.jpg?)
