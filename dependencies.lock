@@ -1,0 +1,17 @@
+dependencies:
+  idf:
+    source:
+      type: idf
+    version: 5.3.1
+  lvgl/lvgl:
+    dependencies: []
+    source:
+      path: /home/wes/code/sharp_screen_project/components/lvgl__lvgl
+      type: local
+    version: 9.2.2
+direct_dependencies:
+- idf
+- lvgl/lvgl
+manifest_hash: 6a57fc7bb3e46d13da40bffe9fbe07db05cbf22832c0208cf38198e7b0505479
+target: esp32
+version: 2.0.0
