@@ -1,7 +1,6 @@
 ## Monochrome display demo
 
-This is just a repo showing how to get the SHARP memory display working with
-LVGL 9.x
+This is just a repo showing how to get the SHARP memory display working with LVGL 9.x running on an ESP32 with esp-idf.
 
 In my case I'm using the LS027B7DH01 model which is 240x400 pixels.
 
