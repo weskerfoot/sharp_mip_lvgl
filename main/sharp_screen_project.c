@@ -1,8 +1,11 @@
 #include "lvgl.h"
 #include "sharp_mip.h"
 #include "driver/gpio.h"
+#include "esp_freertos_hooks.h"
 
 #define DRAW_BUF_SIZE (SHARP_MIP_VER_RES * (SHARP_MIP_HOR_RES / 8))
+#define CANVAS_WIDTH  400
+#define CANVAS_HEIGHT 240
 
 esp_err_t
 sharp_mip_spi_init() {
@@ -38,7 +41,14 @@ sharp_mip_spi_init() {
   return ESP_OK;
 }
 
-static uint8_t buf[DRAW_BUF_SIZE];
+static uint8_t backbuf[DRAW_BUF_SIZE];
+static uint8_t frontbuf[DRAW_BUF_SIZE];
+
+void
+run_tick() {
+  // Increment LVGL tick by FreeRTOS tick period (usually 1ms)
+  lv_tick_inc(portTICK_PERIOD_MS);
+}
 
 void app_main(void) {
   lv_init();
@@ -63,58 +73,36 @@ void app_main(void) {
   disp = lv_display_create(SHARP_MIP_HOR_RES, SHARP_MIP_VER_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_I1);
   lv_display_add_event_cb(disp, sharp_mip_rounder, LV_EVENT_INVALIDATE_AREA, disp);
-  lv_display_set_flush_cb(disp, sharp_mip_flush);  // your flush function
+  lv_display_set_flush_cb(disp, sharp_mip_flush);
 
-  lv_display_set_buffers(disp, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_obj_t *scr = lv_screen_active();
+  lv_display_set_buffers(disp, backbuf, frontbuf, sizeof(backbuf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
-  lv_obj_t *rect = lv_obj_create(scr);
+  LV_DRAW_BUF_DEFINE_STATIC(draw_buf, CANVAS_WIDTH, CANVAS_HEIGHT, LV_COLOR_FORMAT_I1);
+  LV_DRAW_BUF_INIT_STATIC(draw_buf);
 
-  lv_obj_set_size(rect, 80, 80);
-  lv_obj_set_pos(rect, 80, 130);
+  lv_obj_t * label1 = lv_label_create(lv_screen_active());
+  lv_label_set_long_mode(label1, LV_LABEL_LONG_WRAP);     /*Break the long lines*/
+  lv_label_set_text(label1, "#0000ff Re-color# #ff00ff words# #ff0000 of a# label, align the lines to the center "
+                    "and wrap long text automatically.");
+  lv_obj_set_width(label1, 150);  /*Set smaller width to make the lines wrap*/
+  lv_obj_set_style_text_align(label1, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(label1, LV_ALIGN_CENTER, 0, -40);
 
-  lv_obj_set_style_bg_color(rect, lv_color_black(), 0);
-  lv_obj_set_style_border_color(rect, lv_color_white(), 0);
-  lv_obj_set_style_border_width(rect, 2, 0);
+  lv_obj_t * label2 = lv_label_create(lv_screen_active());
+  lv_label_set_long_mode(label2, LV_LABEL_LONG_SCROLL_CIRCULAR);     /*Circular scroll*/
+  lv_obj_set_width(label2, 150);
+  lv_label_set_text(label2, "It is a circularly scrolling text. ");
+  lv_obj_align(label2, LV_ALIGN_CENTER, 0, 40);
 
-  lv_obj_t *label = lv_label_create(scr);
-
-  lv_label_set_text(label, "Hello, world!");
-  lv_obj_center(label);
-
-  lv_obj_t *shaft = lv_obj_create(scr);
-  lv_obj_set_size(shaft, 20, 80); // Narrow and tall
-  lv_obj_set_pos(shaft, 100, 30);
-  lv_obj_set_style_radius(shaft, LV_RADIUS_CIRCLE, 0); // Fully rounded corners
-  lv_obj_set_style_bg_opa(shaft, LV_OPA_COVER, 0);
-  lv_obj_set_style_bg_color(shaft, lv_color_black(), 0);
-
-  lv_obj_t *cover = lv_obj_create(scr);
-  lv_obj_set_size(cover, 20, 20);
-  lv_obj_set_pos(cover, 100, 90);
-  lv_obj_set_style_bg_opa(cover, LV_OPA_COVER, 0);
-  lv_obj_set_style_bg_color(cover, lv_color_white(), 0);  // "erase" bottom rounding
-  lv_obj_set_style_border_width(cover, 0, 0);
-  lv_obj_clear_flag(cover, LV_OBJ_FLAG_CLICKABLE); // no interaction
-
-  lv_obj_t *left_circle = lv_obj_create(scr);
-  lv_obj_set_size(left_circle, 20, 20);
-  lv_obj_set_pos(left_circle, 85, 90);
-  lv_obj_set_style_radius(left_circle, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_bg_opa(left_circle, LV_OPA_COVER, 0);
-  lv_obj_set_style_bg_color(left_circle, lv_color_black(), 0);
-
-  lv_obj_t *right_circle = lv_obj_create(scr);
-  lv_obj_set_size(right_circle, 20, 20);
-  lv_obj_set_pos(right_circle, 115, 90);
-  lv_obj_set_style_radius(right_circle, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_bg_opa(right_circle, LV_OPA_COVER, 0);
-  lv_obj_set_style_bg_color(right_circle, lv_color_black(), 0);
+  esp_err_t tick_ok = esp_register_freertos_tick_hook(run_tick);
 
   while (1) {
     lv_timer_handler();
-    vTaskDelay(pdMS_TO_TICKS(10));
-    sharp_mip_com_inversion();
+    vTaskDelay(pdMS_TO_TICKS(16));  // Call handler every 10ms
+    static int count = 0;
+    if (++count >= 100) { // Run inversion every 1s
+        sharp_mip_com_inversion();
+        count = 0;
+    }
   }
 }
-

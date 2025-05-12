@@ -44,10 +44,6 @@ print_buffer(uint8_t *buf, int x_size, int y_size) {
 
 static void
 sharp_mip_spi_send(const uint8_t *data, size_t length) {
-  // printf("Sending data over SPI of size %zu\n", length);
-  if (data[0] == (SHARP_MIP_HEADER | SHARP_MIP_UPDATE_RAM_FLAG)) {
-    printf("Transferring image data, size = %zu, color depth = %d\n", length, LV_COLOR_DEPTH);
-  }
   if (sharp_spi_handle == NULL) {
       printf("Error: SPI handle not initialized\n");
       return;
@@ -79,8 +75,9 @@ sharp_mip_reverse_byte(uint8_t b) {
 void
 sharp_mip_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     if (area->y2 < 0 || area->y1 >= SHARP_MIP_VER_RES) {
-        lv_disp_flush_ready(disp);
-        return;
+      printf("Not flushing anything\n");
+      lv_disp_flush_ready(disp);
+      return;
     }
 
     px_map += 8; // skip palette
@@ -89,8 +86,7 @@ sharp_mip_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     uint16_t active_y2 = area->y2 >= SHARP_MIP_VER_RES ? SHARP_MIP_VER_RES - 1 : area->y2;
 
     uint16_t buf_h = active_y2 - active_y1 + 1;
-    uint16_t buf_size = buf_h * (SHARP_MIP_HOR_RES / 8);
-
+    // uint16_t buf_size = buf_h * (SHARP_MIP_HOR_RES / 8);
     // lv_draw_sw_i1_invert(px_map, buf_size); // not needed?
 
     for (uint16_t active_y = 0; active_y < buf_h; active_y++) {
@@ -98,7 +94,7 @@ sharp_mip_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
       memcpy(&disp_buf[BUFIDX(0, active_y)], &px_map[active_y * (SHARP_MIP_HOR_RES / 8)], SHARP_MIP_HOR_RES / 8);
 
       // Set gate addresses and dummy bytes
-      disp_buf[BUFIDX(0, active_y) - 1] = sharp_mip_reverse_byte(active_y1 + active_y - 1);
+      disp_buf[BUFIDX(0, active_y) - 1] = sharp_mip_reverse_byte(active_y1 + active_y + 1);
       disp_buf[BUFIDX(0, active_y) - 2] = 0;
     }
 
