@@ -50,6 +50,13 @@ run_tick() {
   lv_tick_inc(portTICK_PERIOD_MS);
 }
 
+void lvgl_task(void *arg) {
+    while (1) {
+        lv_timer_handler();
+        vTaskDelay(pdMS_TO_TICKS(1));  // ~60Hz
+    }
+}
+
 void app_main(void) {
   lv_init();
   static lv_display_t *disp;
@@ -69,6 +76,9 @@ void app_main(void) {
       .intr_type = GPIO_INTR_DISABLE
   };
   gpio_config(&io_conf);
+
+  static lv_style_t style;
+  lv_style_init(&style);
 
   disp = lv_display_create(SHARP_MIP_HOR_RES, SHARP_MIP_VER_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_I1);
@@ -94,15 +104,9 @@ void app_main(void) {
   lv_label_set_text(label2, "It is a circularly scrolling text. ");
   lv_obj_align(label2, LV_ALIGN_CENTER, 0, 40);
 
-  esp_err_t tick_ok = esp_register_freertos_tick_hook(run_tick);
+  lv_obj_add_style(label2, &style, 0);
+  lv_style_set_anim_duration(&style, 10000);
 
-  while (1) {
-    lv_timer_handler();
-    vTaskDelay(pdMS_TO_TICKS(16));  // Call handler every 10ms
-    static int count = 0;
-    if (++count >= 100) { // Run inversion every 1s
-        sharp_mip_com_inversion();
-        count = 0;
-    }
-  }
+  esp_err_t tick_ok = esp_register_freertos_tick_hook(run_tick);
+  xTaskCreate(lvgl_task, "LVGL Task", 4096, NULL, 2, NULL);
 }

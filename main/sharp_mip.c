@@ -94,7 +94,7 @@ sharp_mip_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
       memcpy(&disp_buf[BUFIDX(0, active_y)], &px_map[active_y * (SHARP_MIP_HOR_RES / 8)], SHARP_MIP_HOR_RES / 8);
 
       // Set gate addresses and dummy bytes
-      disp_buf[BUFIDX(0, active_y) - 1] = sharp_mip_reverse_byte(active_y1 + active_y + 1);
+      disp_buf[BUFIDX(0, active_y) - 1] = sharp_mip_reverse_byte(active_y1 + active_y - 1);
       disp_buf[BUFIDX(0, active_y) - 2] = 0;
     }
 
@@ -107,6 +107,8 @@ sharp_mip_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     LV_DRV_DISP_SPI_CS(0);
 
     lv_disp_flush_ready(disp);
+    sharp_mip_com_inversion();
+    sharp_mip_com_inversion();
 }
 
 void
